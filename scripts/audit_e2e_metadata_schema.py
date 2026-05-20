@@ -2,6 +2,10 @@
 """
 Audit Waymo E2E proto schema and a small sample of actual raw records.
 Writes a JSON report to GCS so we can verify populated fields before the full metadata run.
+
+Important: this script only imports the E2E proto module. It does NOT import
+the broader dataset proto module, because some Waymo E2E package builds do not expose it under
+`waymo_open_dataset.protos`.
 """
 
 from __future__ import annotations
@@ -9,15 +13,31 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import tensorflow as tf
 from google.cloud import storage
 from google.protobuf.message import Message
 from tqdm import tqdm
 
-from waymo_open_dataset.protos import dataset_pb2
 from waymo_open_dataset.protos import end_to_end_driving_data_pb2 as wod_e2ed_pb2
+
+
+CAMERA_ID_TO_NAME = {
+    0: "UNKNOWN",
+    1: "FRONT",
+    2: "FRONT_LEFT",
+    3: "FRONT_RIGHT",
+    4: "SIDE_LEFT",
+    5: "SIDE_RIGHT",
+    6: "REAR_LEFT",
+    7: "REAR_RIGHT",
+    8: "REAR",
+}
+
+
+def camera_name(camera_id: int) -> str:
+    return CAMERA_ID_TO_NAME.get(int(camera_id), f"CAMERA_{int(camera_id)}")
 
 
 def parse_gcs_uri(uri: str) -> Tuple[str, str]:
@@ -70,7 +90,8 @@ def field_nonempty(msg: Message, field_name: str) -> bool:
         return False
     val = getattr(msg, field_name)
     try:
-        if msg.DESCRIPTOR.fields_by_name[field_name].label == msg.DESCRIPTOR.fields_by_name[field_name].LABEL_REPEATED:
+        field_desc = msg.DESCRIPTOR.fields_by_name[field_name]
+        if field_desc.label == field_desc.LABEL_REPEATED:
             return len(val) > 0
     except Exception:
         pass
@@ -91,6 +112,7 @@ def audit_records(local_tfrecord: Path, max_records: int) -> Dict[str, Any]:
     camera_counts: Dict[str, int] = {}
     calib_counts: Dict[str, int] = {}
     state_counts: Dict[str, int] = {}
+    dynamic_descriptors: Dict[str, Any] = {}
     preference_count = 0
     total = 0
 
@@ -101,6 +123,19 @@ def audit_records(local_tfrecord: Path, max_records: int) -> Dict[str, Any]:
         e2e = wod_e2ed_pb2.E2EDFrame()
         e2e.ParseFromString(raw.numpy())
         total += 1
+
+        # Capture descriptors from actual parsed objects. This avoids requiring the dataset proto module.
+        dynamic_descriptors.setdefault("Frame", descriptor_fields(e2e.frame))
+        dynamic_descriptors.setdefault("Context", descriptor_fields(e2e.frame.context))
+        if len(e2e.frame.images) > 0:
+            dynamic_descriptors.setdefault("CameraImage", descriptor_fields(e2e.frame.images[0]))
+            if hasattr(e2e.frame.images[0], "velocity"):
+                dynamic_descriptors.setdefault("Velocity", descriptor_fields(e2e.frame.images[0].velocity))
+        if len(e2e.frame.context.camera_calibrations) > 0:
+            dynamic_descriptors.setdefault(
+                "CameraCalibration",
+                descriptor_fields(e2e.frame.context.camera_calibrations[0]),
+            )
 
         for f in e2e.DESCRIPTOR.fields:
             if field_nonempty(e2e, f.name):
@@ -113,10 +148,7 @@ def audit_records(local_tfrecord: Path, max_records: int) -> Dict[str, Any]:
                 bump(counts, f"Context.{f.name}")
 
         for img in e2e.frame.images:
-            try:
-                cam_name = dataset_pb2.CameraName.Name.Name(int(img.name))
-            except Exception:
-                cam_name = str(int(img.name))
+            cam_name = camera_name(int(img.name))
             bump(camera_counts, cam_name)
             for f in img.DESCRIPTOR.fields:
                 if f.name == "image":
@@ -132,10 +164,7 @@ def audit_records(local_tfrecord: Path, max_records: int) -> Dict[str, Any]:
                         bump(counts, f"Velocity.{cam_name}.{f.name}")
 
         for calib in e2e.frame.context.camera_calibrations:
-            try:
-                cam_name = dataset_pb2.CameraName.Name.Name(int(calib.name))
-            except Exception:
-                cam_name = str(int(calib.name))
+            cam_name = camera_name(int(calib.name))
             bump(calib_counts, cam_name)
             for f in calib.DESCRIPTOR.fields:
                 if field_nonempty(calib, f.name):
@@ -151,6 +180,7 @@ def audit_records(local_tfrecord: Path, max_records: int) -> Dict[str, Any]:
 
     return {
         "sampled_records": total,
+        "dynamic_schema_descriptors": dynamic_descriptors,
         "populated_field_counts": counts,
         "camera_image_counts": camera_counts,
         "camera_calibration_counts": calib_counts,
@@ -191,10 +221,10 @@ def main() -> None:
             "E2EDFrame": descriptor_fields(wod_e2ed_pb2.E2EDFrame),
             "EgoTrajectoryStates": descriptor_fields(wod_e2ed_pb2.EgoTrajectoryStates),
             "EgoIntent.Intent_values": list(wod_e2ed_pb2.EgoIntent.Intent.keys()),
-            "Frame": descriptor_fields(dataset_pb2.Frame),
-            "CameraImage": descriptor_fields(dataset_pb2.CameraImage),
-            "CameraCalibration": descriptor_fields(dataset_pb2.CameraCalibration),
-            "Velocity": descriptor_fields(dataset_pb2.Velocity),
+            "Frame/CameraImage/CameraCalibration/Velocity": (
+                "Captured dynamically from parsed records inside each sample report. "
+                "No the dataset proto module import is required."
+            ),
         },
         "sample_reports": sample_reports,
     }

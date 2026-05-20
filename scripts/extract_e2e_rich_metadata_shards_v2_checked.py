@@ -27,7 +27,6 @@ from google.cloud import storage
 from google.protobuf.message import Message
 from tqdm import tqdm
 
-from waymo_open_dataset.protos import dataset_pb2
 from waymo_open_dataset.protos import end_to_end_driving_data_pb2 as wod_e2ed_pb2
 
 FRONT_CAMERA_ID = 1
@@ -224,8 +223,22 @@ def get_camera_calibration(e2e: wod_e2ed_pb2.E2EDFrame, camera_id: int) -> Optio
     return None
 
 
+CAMERA_ID_TO_NAME = {
+    0: "UNKNOWN",
+    1: "FRONT",
+    2: "FRONT_LEFT",
+    3: "FRONT_RIGHT",
+    4: "SIDE_LEFT",
+    5: "SIDE_RIGHT",
+    6: "REAR_LEFT",
+    7: "REAR_RIGHT",
+    8: "REAR",
+}
+
+
 def camera_name(camera_id: int) -> str:
-    return enum_name(dataset_pb2.CameraName.Name, camera_id)
+    # Avoid the dataset proto module. Some Waymo E2E package builds expose only the E2E proto cleanly.
+    return CAMERA_ID_TO_NAME.get(int(camera_id), f"CAMERA_{int(camera_id)}")
 
 
 def velocity_fields(image: Optional[Message], prefix: str) -> Dict[str, Optional[float]]:
