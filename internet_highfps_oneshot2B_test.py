@@ -14,9 +14,12 @@ from typing import Any
 import modal
 
 
-APP_NAME = "ltx-internet-dashcam-highfps-action-future-2b"
+APP_NAME = os.environ.get("LTX_MODAL_APP", "ltx-internet-dashcam-highfps-action-future-2b")
 MODELS_VOLUME_NAME = "models"
-ARTIFACTS_VOLUME_NAME = "internet-dashcam-ltx2b-highfps-action-future-baselines"
+ARTIFACTS_VOLUME_NAME = os.environ.get(
+    "LTX_ARTIFACTS_VOLUME",
+    "internet-dashcam-ltx2b-highfps-action-future-baselines",
+)
 GPU_TYPE = os.environ.get("LTX_MODAL_GPU", "H100")
 
 MODELS_ROOT = Path("/models")
