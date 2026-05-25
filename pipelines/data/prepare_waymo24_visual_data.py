@@ -40,7 +40,8 @@ MAX_LATENT_CONTAINERS = int(os.environ.get("WAYMO24_MAX_LATENT_CONTAINERS", "4")
 DEFAULT_LATENT_WORKERS = int(os.environ.get("WAYMO24_LATENT_WORKERS", str(MAX_LATENT_CONTAINERS)))
 LATENT_COMMIT_EVERY = int(os.environ.get("WAYMO24_LATENT_COMMIT_EVERY", "10"))
 
-CKPT_2B = "ltxv-2b-0.9.6-dev-04-25.safetensors"
+CKPT_2B = os.environ.get("LTX_CKPT_2B", "ltxv-2b-0.9.6-dev-04-25.safetensors")
+DEFAULT_LATENT_PREFIX = os.environ.get("WAYMO24_LATENT_PREFIX", "latents")
 
 
 @dataclass(frozen=True)
@@ -319,6 +320,14 @@ def upload_file(local_path: Path, remote_relpath: str) -> None:
     shutil.copy2(local_path, dst)
 
 
+def replace_latent_prefix(latent_relpath: str, latent_prefix: str) -> str:
+    path = PurePosixPath(latent_relpath)
+    parts = path.parts
+    if not parts:
+        raise ValueError("Empty latent_relpath")
+    return str(PurePosixPath(latent_prefix, *parts[1:]))
+
+
 def write_manifest(rows: list[WindowRecord], split: str, tmp_dir: Path) -> None:
     manifest_csv = tmp_dir / f"{split}_windows_24fps_121f.csv"
     manifest_jsonl = tmp_dir / f"{split}_windows_24fps_121f.jsonl"
@@ -503,9 +512,9 @@ def stage_split_mp4_windows_parallel(split: str, *, max_scenarios: int, stage_wo
     return write_manifest_modal.remote(all_records, split)
 
 
-def ensure_checkpoint_symlink() -> Path:
-    src = MODELS_ROOT / "ltx" / CKPT_2B
-    dst = REPO / CKPT_2B
+def ensure_checkpoint_symlink(ckpt_name: str = CKPT_2B) -> Path:
+    src = MODELS_ROOT / "ltx" / ckpt_name
+    dst = REPO / ckpt_name
     if not src.exists():
         raise FileNotFoundError(f"Missing checkpoint in Modal volume: {src}")
     if dst.exists() or dst.is_symlink():
@@ -529,6 +538,8 @@ def cache_latents_for_split_shard(
     num_shards: int,
     limit: int = 0,
     overwrite: bool = False,
+    latent_prefix: str = DEFAULT_LATENT_PREFIX,
+    ckpt_name: str = CKPT_2B,
 ) -> dict[str, Any]:
     import sys
 
@@ -540,7 +551,7 @@ def cache_latents_for_split_shard(
     from ltx_video.models.autoencoders.vae_encode import vae_encode
 
     data_volume.reload()
-    ckpt = ensure_checkpoint_symlink()
+    ckpt = ensure_checkpoint_symlink(ckpt_name)
     vae = CausalVideoAutoencoder.from_pretrained(ckpt).to("cuda", dtype=torch.bfloat16)
     vae.eval().requires_grad_(False)
 
@@ -557,7 +568,8 @@ def cache_latents_for_split_shard(
     done = 0
     skipped = 0
     for row in shard_records:
-        latent_path = DATA_ROOT / row["latent_relpath"]
+        latent_relpath = replace_latent_prefix(row["latent_relpath"], latent_prefix)
+        latent_path = DATA_ROOT / latent_relpath
         if latent_path.exists() and not overwrite:
             skipped += 1
             continue
@@ -585,7 +597,8 @@ def cache_latents_for_split_shard(
                 "num_frames": str(TOTAL_FRAMES),
                 "context_frames": str(CONTEXT_FRAMES),
                 "future_frames": str(FUTURE_FRAMES),
-                "vae_checkpoint": CKPT_2B,
+                "vae_checkpoint": ckpt_name,
+                "latent_prefix": latent_prefix,
             },
         )
         done += 1
@@ -602,6 +615,8 @@ def cache_latents_for_split_shard(
         "skipped": skipped,
         "total_seen": len(records),
         "shard_seen": len(shard_records),
+        "latent_prefix": latent_prefix,
+        "vae_checkpoint": ckpt_name,
     }
 
 
@@ -611,9 +626,14 @@ def cache_latents_for_split_parallel(
     limit: int,
     overwrite: bool,
     latent_workers: int,
+    latent_prefix: str,
+    ckpt_name: str,
 ) -> dict[str, Any]:
     workers = max(1, min(latent_workers, MAX_LATENT_CONTAINERS))
-    inputs = [(split, shard_idx, workers, limit, overwrite) for shard_idx in range(workers)]
+    inputs = [
+        (split, shard_idx, workers, limit, overwrite, latent_prefix, ckpt_name)
+        for shard_idx in range(workers)
+    ]
     shard_results = []
     for result in cache_latents_for_split_shard.starmap(
         inputs,
@@ -630,6 +650,8 @@ def cache_latents_for_split_parallel(
         "cached": sum(row["cached"] for row in shard_results),
         "skipped": sum(row["skipped"] for row in shard_results),
         "total_seen": max((row["total_seen"] for row in shard_results), default=0),
+        "latent_prefix": latent_prefix,
+        "vae_checkpoint": ckpt_name,
         "shards": shard_results,
     }
 
@@ -645,6 +667,8 @@ def main(
     overwrite_latents: bool = False,
     latent_workers: int = DEFAULT_LATENT_WORKERS,
     stage_workers: int = DEFAULT_STAGE_WORKERS,
+    latent_prefix: str = DEFAULT_LATENT_PREFIX,
+    ckpt_name: str = CKPT_2B,
 ) -> None:
     splits = [item.strip() for item in splits_csv.split(",") if item.strip()]
     staged: dict[str, int] = {}
@@ -670,6 +694,8 @@ def main(
                 limit=latent_limit,
                 overwrite=overwrite_latents,
                 latent_workers=latent_workers,
+                latent_prefix=latent_prefix,
+                ckpt_name=ckpt_name,
             )
 
     print(json.dumps({"staged": staged, "cached": cached}, indent=2, sort_keys=True))
