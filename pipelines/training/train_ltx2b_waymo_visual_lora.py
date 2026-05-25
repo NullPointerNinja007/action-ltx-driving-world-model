@@ -19,14 +19,14 @@ import modal
 APP_NAME = os.environ.get("LTX_MODAL_APP", "ltx2b-waymo24-visual-lora-r16-train")
 DATA_VOLUME_NAME = "waymo-e2e-24fps-121f-visual-continuation-data"
 MODELS_VOLUME_NAME = "models"
-CHECKPOINT_VOLUME_NAME = "ltx2b-waymo24fps-visual-lora-r16-checkpoints"
+CHECKPOINT_VOLUME_NAME = "ltx2b-dev-waymo24fps-visual-lora-r16-checkpoints"
 
 DATA_ROOT = Path("/data")
 MODELS_ROOT = Path("/models")
 CKPT_ROOT = Path("/checkpoints")
 REPO = Path("/workspace/LTX-Video")
 
-CKPT_2B = "ltxv-2b-0.9.8-distilled.safetensors"
+CKPT_2B = "ltxv-2b-0.9.6-dev-04-25.safetensors"
 
 FPS = 24
 WIDTH = 512
