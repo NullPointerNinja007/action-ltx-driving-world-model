@@ -19,14 +19,18 @@ import modal
 APP_NAME = os.environ.get("LTX_MODAL_APP", "ltx2b-waymo24-visual-lora-r16-train")
 DATA_VOLUME_NAME = "waymo-e2e-24fps-121f-visual-continuation-data"
 MODELS_VOLUME_NAME = "models"
-CHECKPOINT_VOLUME_NAME = "ltx2b-dev-waymo24fps-visual-lora-r16-checkpoints"
+CHECKPOINT_VOLUME_NAME = os.environ.get(
+    "LTX_CHECKPOINT_VOLUME_NAME",
+    "ltx2b-dev-waymo24fps-visual-lora-r16-checkpoints",
+)
 
 DATA_ROOT = Path("/data")
 MODELS_ROOT = Path("/models")
 CKPT_ROOT = Path("/checkpoints")
 REPO = Path("/workspace/LTX-Video")
 
-CKPT_2B = "ltxv-2b-0.9.6-dev-04-25.safetensors"
+CKPT_2B = os.environ.get("LTX_CKPT_2B", "ltxv-2b-0.9.6-dev-04-25.safetensors")
+DEFAULT_LATENT_PREFIX = os.environ.get("WAYMO24_LATENT_PREFIX", "latents")
 
 FPS = 24
 WIDTH = 512
@@ -67,6 +71,8 @@ class TrainConfig:
     negative_prompt: str
     train_manifest: str
     val_manifest: str
+    latent_prefix: str
+    base_checkpoint: str
     num_val_samples: int
 
 
@@ -107,9 +113,9 @@ def run_checked(cmd: list[str], *, cwd: Path | None = None) -> subprocess.Comple
     )
 
 
-def ensure_checkpoint_symlink() -> Path:
-    src = MODELS_ROOT / "ltx" / CKPT_2B
-    dst = REPO / CKPT_2B
+def ensure_checkpoint_symlink(ckpt_name: str = CKPT_2B) -> Path:
+    src = MODELS_ROOT / "ltx" / ckpt_name
+    dst = REPO / ckpt_name
     if not src.exists():
         raise FileNotFoundError(f"Missing checkpoint in Modal volume: {src}")
     if dst.exists() or dst.is_symlink():
@@ -136,9 +142,17 @@ def seed_everything(seed: int) -> None:
     torch.cuda.manual_seed_all(seed)
 
 
+def replace_latent_prefix(latent_relpath: str, latent_prefix: str) -> str:
+    parts = Path(latent_relpath).parts
+    if not parts:
+        raise ValueError("Empty latent_relpath")
+    return str(Path(latent_prefix, *parts[1:]))
+
+
 class LatentRowsDataset:
-    def __init__(self, rows: list[dict[str, str]]):
+    def __init__(self, rows: list[dict[str, str]], latent_prefix: str):
         self.rows = rows
+        self.latent_prefix = latent_prefix
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -148,7 +162,7 @@ class LatentRowsDataset:
         from safetensors.torch import load_file
 
         row = self.rows[idx]
-        latent_path = DATA_ROOT / row["latent_relpath"]
+        latent_path = DATA_ROOT / replace_latent_prefix(row["latent_relpath"], self.latent_prefix)
         if not latent_path.exists():
             raise FileNotFoundError(f"Missing latent cache: {latent_path}")
         latents = load_file(str(latent_path))["latents"].to(torch.bfloat16)
@@ -189,7 +203,7 @@ def setup_pipeline_and_lora(config: TrainConfig):
     from peft import LoraConfig, get_peft_model
     from ltx_video.inference import create_ltx_video_pipeline
 
-    ckpt = ensure_checkpoint_symlink()
+    ckpt = ensure_checkpoint_symlink(config.base_checkpoint)
     pipeline = create_ltx_video_pipeline(
         ckpt_path=str(ckpt),
         precision="bfloat16",
@@ -428,7 +442,7 @@ def train(
 
     trainable = [p for p in pipeline.transformer.parameters() if p.requires_grad]
     optimizer = torch.optim.AdamW(trainable, lr=config.learning_rate, weight_decay=config.weight_decay)
-    dataset = LatentRowsDataset(train_rows)
+    dataset = LatentRowsDataset(train_rows, config.latent_prefix)
     batch_iter = cycle_indices(len(dataset), config.batch_size, config.seed)
 
     loss_history: list[dict[str, float]] = []
@@ -506,6 +520,8 @@ def main(
     train_limit: int = 0,
     val_limit: int = 32,
     num_val_samples: int = 4,
+    latent_prefix: str = DEFAULT_LATENT_PREFIX,
+    base_checkpoint: str = CKPT_2B,
 ) -> None:
     if not run_name:
         run_name = datetime.now(timezone.utc).strftime("ltx2b_waymo24_visual_lora_r16_%Y%m%d_%H%M%S")
@@ -526,6 +542,8 @@ def main(
         negative_prompt=DEFAULT_NEGATIVE_PROMPT,
         train_manifest="manifests/train_windows_24fps_121f.csv",
         val_manifest="manifests/val_windows_24fps_121f.csv",
+        latent_prefix=latent_prefix,
+        base_checkpoint=base_checkpoint,
         num_val_samples=num_val_samples,
     )
     result = train.remote(asdict(config), train_limit=train_limit, val_limit=val_limit)
