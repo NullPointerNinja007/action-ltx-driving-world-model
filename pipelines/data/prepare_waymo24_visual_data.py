@@ -36,8 +36,11 @@ MAX_STAGE_CONTAINERS = int(os.environ.get("WAYMO24_MAX_STAGE_CONTAINERS", "64"))
 DEFAULT_STAGE_WORKERS = int(os.environ.get("WAYMO24_STAGE_WORKERS", str(MAX_STAGE_CONTAINERS)))
 GCS_FRAME_DOWNLOAD_WORKERS = int(os.environ.get("WAYMO24_GCS_FRAME_DOWNLOAD_WORKERS", "8"))
 WINDOWS_PER_SCENARIO = 4
+MAX_LATENT_CONTAINERS = int(os.environ.get("WAYMO24_MAX_LATENT_CONTAINERS", "4"))
+DEFAULT_LATENT_WORKERS = int(os.environ.get("WAYMO24_LATENT_WORKERS", str(MAX_LATENT_CONTAINERS)))
+LATENT_COMMIT_EVERY = int(os.environ.get("WAYMO24_LATENT_COMMIT_EVERY", "10"))
 
-CKPT_2B = "ltxv-2b-0.9.8-distilled.safetensors"
+CKPT_2B = "ltxv-2b-0.9.6-dev-04-25.safetensors"
 
 
 @dataclass(frozen=True)
@@ -517,9 +520,16 @@ def ensure_checkpoint_symlink() -> Path:
     cpu=8,
     memory=49152,
     timeout=8 * 60 * 60,
+    max_containers=MAX_LATENT_CONTAINERS,
     volumes={str(DATA_ROOT): data_volume, str(MODELS_ROOT): models_volume},
 )
-def cache_latents_for_split(split: str, limit: int = 0) -> dict[str, Any]:
+def cache_latents_for_split_shard(
+    split: str,
+    shard_idx: int,
+    num_shards: int,
+    limit: int = 0,
+    overwrite: bool = False,
+) -> dict[str, Any]:
     import sys
 
     sys.path.insert(0, str(REPO))
@@ -542,12 +552,13 @@ def cache_latents_for_split(split: str, limit: int = 0) -> dict[str, Any]:
         records = list(csv.DictReader(handle))
     if limit > 0:
         records = records[:limit]
+    shard_records = [row for idx, row in enumerate(records) if idx % num_shards == shard_idx]
 
     done = 0
     skipped = 0
-    for row in records:
+    for row in shard_records:
         latent_path = DATA_ROOT / row["latent_relpath"]
-        if latent_path.exists():
+        if latent_path.exists() and not overwrite:
             skipped += 1
             continue
         mp4_path = DATA_ROOT / row["mp4_relpath"]
@@ -574,15 +585,53 @@ def cache_latents_for_split(split: str, limit: int = 0) -> dict[str, Any]:
                 "num_frames": str(TOTAL_FRAMES),
                 "context_frames": str(CONTEXT_FRAMES),
                 "future_frames": str(FUTURE_FRAMES),
+                "vae_checkpoint": CKPT_2B,
             },
         )
         done += 1
-        if done % 50 == 0:
+        if done % LATENT_COMMIT_EVERY == 0:
             data_volume.commit()
-            print(f"[{split}] cached {done} latents, skipped {skipped}")
+            print(f"[{split} shard {shard_idx + 1}/{num_shards}] cached {done} latents, skipped {skipped}")
 
     data_volume.commit()
-    return {"split": split, "cached": done, "skipped": skipped, "total_seen": len(records)}
+    return {
+        "split": split,
+        "shard_idx": shard_idx,
+        "num_shards": num_shards,
+        "cached": done,
+        "skipped": skipped,
+        "total_seen": len(records),
+        "shard_seen": len(shard_records),
+    }
+
+
+def cache_latents_for_split_parallel(
+    split: str,
+    *,
+    limit: int,
+    overwrite: bool,
+    latent_workers: int,
+) -> dict[str, Any]:
+    workers = max(1, min(latent_workers, MAX_LATENT_CONTAINERS))
+    inputs = [(split, shard_idx, workers, limit, overwrite) for shard_idx in range(workers)]
+    shard_results = []
+    for result in cache_latents_for_split_shard.starmap(
+        inputs,
+        order_outputs=False,
+        return_exceptions=True,
+    ):
+        if isinstance(result, Exception):
+            raise result
+        shard_results.append(result)
+    shard_results.sort(key=lambda row: row["shard_idx"])
+    return {
+        "split": split,
+        "workers": workers,
+        "cached": sum(row["cached"] for row in shard_results),
+        "skipped": sum(row["skipped"] for row in shard_results),
+        "total_seen": max((row["total_seen"] for row in shard_results), default=0),
+        "shards": shard_results,
+    }
 
 
 @app.local_entrypoint()
@@ -593,6 +642,8 @@ def main(
     stage_mp4s: bool = True,
     cache_latents: bool = True,
     latent_limit: int = 0,
+    overwrite_latents: bool = False,
+    latent_workers: int = DEFAULT_LATENT_WORKERS,
     stage_workers: int = DEFAULT_STAGE_WORKERS,
 ) -> None:
     splits = [item.strip() for item in splits_csv.split(",") if item.strip()]
@@ -614,6 +665,11 @@ def main(
     cached: dict[str, Any] = {}
     if cache_latents:
         for split in splits:
-            cached[split] = cache_latents_for_split.remote(split, limit=latent_limit)
+            cached[split] = cache_latents_for_split_parallel(
+                split,
+                limit=latent_limit,
+                overwrite=overwrite_latents,
+                latent_workers=latent_workers,
+            )
 
     print(json.dumps({"staged": staged, "cached": cached}, indent=2, sort_keys=True))
