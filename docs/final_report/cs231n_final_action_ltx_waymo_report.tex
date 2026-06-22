@@ -1,0 +1,378 @@
+\documentclass[10pt]{article}
+
+\usepackage[margin=0.68in]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{tabularx}
+\usepackage{xcolor}
+
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue, citecolor=blue}
+\renewcommand{\arraystretch}{1.08}
+\setlength{\parskip}{0.38em}
+\setlength{\parindent}{0pt}
+
+\newcommand{\figmaybe}[4]{%
+\begin{figure}[H]
+  \centering
+  \IfFileExists{#1}{\includegraphics[width=#2]{#1}}{%
+    \fbox{\parbox{0.88\linewidth}{Missing figure file: #1}}}%
+  \caption{#3}
+  \label{#4}
+\end{figure}
+}
+
+\title{\vspace{-0.55in}\textbf{Action-Conditioned Driving Video Generation with a Pretrained Diffusion Transformer}}
+\author{CS231N Final Project}
+\date{June 2026}
+
+\begin{document}
+\maketitle
+\vspace{-0.45in}
+
+\begin{abstract}
+We adapt a pretrained video diffusion transformer into a front-camera driving world model. The task is future video continuation: given 49 observed Waymo frames at 24 FPS, generate the next 72 frames while conditioning on future ego-action signals. The key challenge is not simply visual prediction. A no-action model can predict plausible futures, but it cannot answer counterfactual action questions because changing future actions has no effect. Our final model uses full 112D per-frame action signals, a temporal action bottleneck, low-frequency motion supervision, and high-frequency teacher preservation. On the full 1,904-window validation set, the selected action-conditioned model is action-sensitive with $S_{\mathrm{rgb}}=2.262$ while preserving visual quality close to the no-action baseline: PSNR 17.180 vs 17.153, SSIM 0.70816 vs 0.70789, and FVD-style 11.747 vs 11.702. On high-action clips, correct actions outperform wrong actions with $\Delta$PSNR $=+0.0019$ and $\Delta$SSIM $=+0.00027$. The improvement is modest but important: the model moves from visually plausible but uncontrollable prediction to measurable action responsiveness without catastrophic visual collapse. The main discovery is that action control and visual fidelity are separate axes; action conditioning must be routed through low-frequency temporal structure rather than treated as generic global conditioning.
+\end{abstract}
+
+\section{Question}
+
+The project asks a specific world-modeling question:
+\begin{quote}
+\emph{Given the same observed driving scene, does a video diffusion transformer generate a different and more correct future when the ego-action sequence changes?}
+\end{quote}
+
+This is stricter than ordinary future-video prediction. A no-action model can perform well on PSNR, SSIM, and FVD-style metrics if the future is predictable from context. However, it is not controllable:
+\[
+G(x_{\mathrm{ctx}}, a_{\mathrm{correct}})
+=
+G(x_{\mathrm{ctx}}, a_{\mathrm{zero}})
+=
+G(x_{\mathrm{ctx}}, a_{\mathrm{shuffled}})
+\]
+because the actions are not inputs. A driving world model must do better than this: future actions should influence generated future video, especially for braking, acceleration, and turning windows.
+
+\section{Task and Data}
+
+Each example is a 121-frame 24 FPS clip:
+\[
+121 = 49 \text{ context frames} + 72 \text{ future frames}.
+\]
+The model sees the first 49 frames and generates the next 72 frames. Future-frame loss is computed only on the generated future segment. We use upsampled 24 FPS ego-action conditions aligned to these same 121 frames. The final model uses the full 112D per-frame action tensor:
+\[
+a \in \mathbb{R}^{121 \times 112}.
+\]
+
+\begin{table}[H]
+\centering
+\caption{Final experimental protocol. The final validation result uses the full 1,904-window validation set, not the earlier 5-clip sweeps.}
+\small
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+\textbf{Item} & \textbf{Value} \\
+\midrule
+Backbone & Pretrained 2B-parameter video diffusion transformer \\
+Input & 49 front-camera context frames at 24 FPS \\
+Target & 72 future front-camera frames at 24 FPS \\
+Action input & Full 112D per-frame ego-action tensor, upsampled to 24 FPS \\
+Training windows & 7,992 windows per epoch \\
+Final validation windows & 1,904 windows \\
+Frozen modules & VAE, text encoder, base transformer weights \\
+Trainable modules & LoRA adapters and action-conditioning modules \\
+Sampling correction & shifted/log-normal timestep sampling \\
+Inference correction & \texttt{image\_cond\_noise\_scale=0.0} \\
+Seed & 231 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Method}
+
+\subsection{Visual Baseline}
+
+The first strong baseline is a no-action visual LoRA. It adapts the pretrained diffusion transformer to Waymo front-camera videos using the same 49-to-72 frame task, but receives no action tensor. It is the right visual-fidelity baseline because it answers: how good is video continuation if the model is not asked to be controllable?
+
+By construction, its counterfactual action sensitivity is exactly zero:
+\[
+S_{\mathrm{rgb}}=0.
+\]
+
+\subsection{Final Action Model}
+
+The final action-conditioned model uses the action pathway:
+\[
+112\mathrm{D}\ \text{frame actions}
+\rightarrow
+\text{temporal action encoder}
+\rightarrow
+\text{latent-time bottleneck}
+\rightarrow
+\text{low-frequency motion supervision}.
+\]
+
+The architectural principle is that ego-actions are low-frequency temporal controls, not high-frequency image details. Steering, acceleration, and braking should change scene evolution; they should not directly rewrite texture, edges, and local appearance. This led to the final loss:
+\[
+\mathcal{L}
+=
+0.25\mathcal{L}_{\mathrm{diff}}
++ 1.00\mathcal{L}_{\mathrm{lowfreq\ target}}
++ 1.00\mathcal{L}_{\mathrm{lowfreq\ delta}}
++ 0.20\mathcal{L}_{\mathrm{hf}}
++ 0.05\mathcal{L}_{\mathrm{action}}
++ 0.002\mathcal{L}_{\mathrm{res}}
++ 0.002\mathcal{L}_{\mathrm{gate}}.
+\]
+
+The diffusion term keeps the student aligned with the pretrained denoising objective. The low-frequency target and delta terms force the action path to explain coarse future evolution. The high-frequency teacher term keeps the action branch from destroying visual detail learned by the no-action visual model.
+
+\subsection{How We Arrived at This Objective}
+
+The final loss was not guessed at the start. It came from a sequence of failures that isolated what action conditioning was breaking.
+
+\begin{table}[H]
+\centering
+\caption{Design path toward the final objective. The early methods are included only to show why the final low-frequency/teacher loss was necessary.}
+\small
+\begin{tabularx}{\linewidth}{lX X}
+\toprule
+\textbf{Stage} & \textbf{What we tried} & \textbf{What we learned} \\
+\midrule
+No-action visual LoRA & Train only visual adaptation for 49-frame context to 72-frame future prediction. & Strong visual baseline, but exactly action-blind: $S_{\mathrm{rgb}}=0.000$. \\
+Global action tokens / temporal tokens & Encode actions as conditioning tokens and expose them broadly to the transformer. & The model could become action-sensitive, but broad injection often interfered with visual rendering. \\
+AdaLN action conditioning & Use action vectors to modulate transformer activations. & High PSNR/SSIM came from smoothing: on the 512-window diagnostic set, AdaLN reached PSNR 19.539 and SSIM 0.795, but sharpness collapsed to 0.120 and motion to 0.511. \\
+Teacher-preserving bottlenecks & Freeze a corrected no-action visual model and train only action modules. & Preserved the visual pathway better, but weak action objectives could still be ignored or trade motion for sharpness. \\
+Final V4 objective & Full 112D frame actions, latent-time bottleneck, low-frequency target/delta losses, high-frequency teacher preservation, residual/gate regularization. & Full-val action sensitivity became measurable, $S_{\mathrm{rgb}}=2.262$, while PSNR/SSIM/FVD stayed close to no-action. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+This progression explains the complicated loss. Each term is a response to a specific failure mode:
+\[
+\begin{array}{ll}
+\mathcal{L}_{\mathrm{diff}} & \text{prevents drifting away from the pretrained denoising objective},\\
+\mathcal{L}_{\mathrm{lowfreq\ target}} & \text{aligns coarse future latent state with the recorded future},\\
+\mathcal{L}_{\mathrm{lowfreq\ delta}} & \text{aligns temporal evolution rather than only static appearance},\\
+\mathcal{L}_{\mathrm{hf}} & \text{preserves high-frequency detail from the no-action teacher},\\
+\mathcal{L}_{\mathrm{action}} & \text{encourages the action branch to predict useful motion/control summaries},\\
+\mathcal{L}_{\mathrm{res}},\mathcal{L}_{\mathrm{gate}} & \text{keep the action residual from overpowering the visual model}.
+\end{array}
+\]
+
+\section{Metrics}
+
+We use two classes of metrics.
+
+\textbf{Visual prediction metrics} compare generated future frames to the recorded future: PSNR, SSIM, FVD-style feature distance, sharpness ratio, FFT high-frequency ratio, motion ratio, temporal delta error, boundary error, and copy leakage.
+
+\textbf{Action metrics} compare generations under different action sequences while keeping context and seed fixed. Counterfactual sensitivity is:
+\[
+S_{\mathrm{rgb}}
+=
+\frac{1}{3}
+\left[
+\mathrm{MAE}(G(a),G(a_{\mathrm{zero}}))
++ \mathrm{MAE}(G(a),G(a_{\mathrm{shuffled}}))
++ \mathrm{MAE}(G(a),G(a_{\mathrm{reversed}}))
+\right]_{\mathrm{future}}.
+\]
+This measures whether the model uses actions. It does not by itself prove semantic correctness.
+
+To test semantic action alignment, we compare correct actions against wrong actions relative to ground truth:
+\[
+\Delta_{\mathrm{PSNR}}
+=
+\mathrm{PSNR}(G(a_{\mathrm{correct}}), x_{\mathrm{GT}})
+-
+\frac{1}{3}
+\sum_{a'\in\{\mathrm{zero,shuffled,reversed}\}}
+\mathrm{PSNR}(G(a'), x_{\mathrm{GT}}).
+\]
+Positive $\Delta$PSNR or $\Delta$SSIM means the correct action sequence produces futures closer to the real future than wrong actions.
+
+\section{Main Discovery}
+
+The central result is that action conditioning can be made useful without destroying the pretrained visual prior. Earlier action variants often increased PSNR by smoothing the video while reducing detail and motion. The final method produces a different outcome: it preserves visual quality close to no-action while gaining measurable action dependence.
+
+\subsection{Full-Validation Visual Quality}
+
+\begin{table}[H]
+\centering
+\caption{Full 1,904-window validation. The action-conditioned V4 rank-64 checkpoint is visually close to the no-action baseline while adding action sensitivity. FVD-style is lower-is-better.}
+\small
+\begin{tabular}{lrrrrrrr}
+\toprule
+\textbf{Model / mode} & \textbf{clips} & $\mathbf{S_{\mathrm{rgb}}}$ & \textbf{FVD} & \textbf{PSNR} & \textbf{SSIM} & \textbf{Sharp.} & \textbf{Motion} \\
+\midrule
+No-action baseline & 1,904 & 0.000 & \textbf{11.702} & 17.153 & 0.70789 & \textbf{0.243} & \textbf{1.147} \\
+V4 rank-64 correct & 1,904 & \textbf{2.262} & 11.747 & \textbf{17.180} & \textbf{0.70816} & 0.233 & 1.136 \\
+V4 rank-64 zero & 1,904 & -- & 11.781 & 17.184 & 0.70803 & 0.232 & 1.140 \\
+V4 rank-64 shuffled & 1,904 & -- & 11.761 & 17.186 & 0.70802 & 0.232 & 1.135 \\
+V4 rank-64 reversed future & 1,904 & -- & 11.761 & 17.182 & 0.70800 & 0.233 & 1.139 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The important comparison is not that V4 dominates no-action visually. It does not. No-action is still slightly better in FVD and high-frequency retention. The important result is that V4 adds action dependence while staying very close visually:
+\[
+\begin{aligned}
+\Delta \mathrm{PSNR} &= +0.027,\\
+\Delta \mathrm{SSIM} &= +0.00027,\\
+\Delta \mathrm{FVD} &= +0.045,\\
+\Delta \mathrm{sharpness} &= -0.0108.
+\end{aligned}
+\]
+This is a much stronger outcome than the early action-conditioning failures, where action modules often caused blur, wobble, or motion collapse.
+
+\figmaybe{docs/figures/final_report_rewrite/fullval_model_mode_quality.png}{0.92\linewidth}{Full-validation comparison across no-action and V4 action modes. This avoids the misleading one-point plot: the selected action model is compared against no-action and against wrong-action variants. Correct V4 actions are visually close to no-action and are the best V4 mode by FVD-style distance.}{fig:fullvalmodes}
+
+\subsection{Correct Actions Beat Wrong Actions on High-Action Clips}
+
+The strongest semantic result appears after stratifying validation by action magnitude. We define high-action clips as the union of braking, acceleration, and turning strata. On these 1,055 clips, correct actions beat wrong actions on PSNR and SSIM:
+\[
+\Delta\mathrm{PSNR}=+0.0019,\qquad
+\Delta\mathrm{SSIM}=+0.00027.
+\]
+The effect is small, but the sign matters: this is the first evidence that the model is not merely changing arbitrarily when the action tensor changes. It is using the correct action sequence slightly better than zero, shuffled, or reversed-future actions on clips where actions matter.
+
+\begin{table}[H]
+\centering
+\caption{Correct-vs-wrong action advantage by action stratum. Positive values mean correct actions are closer to the recorded future than wrong actions.}
+\small
+\begin{tabular}{lrrrrrr}
+\toprule
+\textbf{Stratum} & \textbf{clips} & $\mathbf{S_{\mathrm{rgb}}}$ & $\mathbf{S_{\Delta}}$ & $\Delta$PSNR & $\Delta$SSIM & $\Delta$flow-mag err. \\
+\midrule
+All & 1,904 & 2.262 & 1.926 & -0.00419 & +0.00015 & -0.00003 \\
+High action & 1,055 & 2.303 & 2.036 & +0.00192 & +0.00027 & +0.00163 \\
+Accelerate & 408 & 2.484 & 2.074 & +0.00493 & +0.00069 & +0.00779 \\
+Turning & 509 & \textbf{2.547} & \textbf{2.245} & +0.00419 & +0.00054 & +0.00377 \\
+Brake & 402 & 2.041 & 1.896 & -0.00064 & -0.00003 & -0.00439 \\
+Low action & 571 & 2.335 & 1.784 & -0.01786 & -0.00001 & -0.00341 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The discovery is more specific than ``actions work.'' The model shows the clearest correct-action advantage on acceleration and turning. Braking remains weak. Low-action clips are not the right place to judge controllability because the no-action future is already highly constrained by context.
+
+\figmaybe{docs/figures/final_report_rewrite/stratum_action_alignment.png}{0.92\linewidth}{Full-validation action sensitivity and correct-action advantage by stratum. The model is most sensitive on turning and acceleration clips, and those same strata show positive correct-vs-wrong PSNR/SSIM advantage. Braking remains weak.}{fig:stratumalignment}
+
+\section{Why This Is a Significant Improvement}
+
+The improvement is clearest when comparing against the starting point:
+\[
+\text{No-action baseline: } S_{\mathrm{rgb}}=0.000.
+\]
+The final full-validation model reaches:
+\[
+\text{V4 rank-64 selected: } S_{\mathrm{rgb}}=2.262 \text{ over 1,904 validation windows}.
+\]
+This is not a 5-clip anecdote. It is the full primary validation subset with four action modes per clip: correct, zero, shuffled, and reversed future.
+
+The improvement is also not purchased by catastrophic quality loss. On full validation, V4 correct is essentially tied with no-action on PSNR/SSIM and only slightly worse on FVD-style and sharpness:
+\[
+\begin{aligned}
+\mathrm{PSNR}:&\quad 17.180 \text{ vs } 17.153,\\
+\mathrm{SSIM}:&\quad 0.70816 \text{ vs } 0.70789,\\
+\mathrm{FVD}:&\quad 11.747 \text{ vs } 11.702,\\
+\mathrm{sharpness}:&\quad 0.233 \text{ vs } 0.243.
+\end{aligned}
+\]
+This is the main engineering result: we found an operating point where the model is no longer action-blind, while the visual model remains near the no-action baseline.
+
+\section{Why PSNR and SSIM Alone Were Not Enough}
+
+Earlier experiments showed that some action methods can improve PSNR and SSIM by reducing detail and motion. This is the metric trap. A smoothed average future can be close in pixel space but poor as controllable video.
+
+\begin{table}[H]
+\centering
+\caption{512-window diagnostic validation. AdaLN has much higher PSNR/SSIM, but its sharpness and motion collapse relative to no-action. This motivated the final low-frequency temporal action objective.}
+\small
+\begin{tabular}{lrrrrrr}
+\toprule
+\textbf{Model} & \textbf{PSNR} & \textbf{SSIM} & \textbf{FVD} & \textbf{Sharp.} & \textbf{FFT-HF} & \textbf{Motion} \\
+\midrule
+No-action visual LoRA & 16.893 & 0.695 & 19.408 & 0.250 & 0.934 & 1.262 \\
+Frame AdaLN action & \textbf{19.539} & \textbf{0.795} & 18.711 & 0.120 & 0.517 & 0.511 \\
+V4 action-strong & 17.803 & 0.724 & 19.065 & 0.164 & 0.688 & 0.995 \\
+V4 main text & 16.844 & 0.691 & 19.654 & 0.245 & 0.913 & 1.216 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\figmaybe{docs/figures/final_report_rewrite/method_evolution_quality_tradeoff.png}{0.92\linewidth}{Diagnostic subset showing why the final V4 objective was needed. AdaLN gives high PSNR but collapses sharpness, high-frequency energy, and motion. V4 main text keeps sharpness/motion much closer to the no-action visual model.}{fig:metrictrap}
+
+\section{Capacity and Training Dynamics}
+
+After the V4 objective started working, we tested whether dense 112D action conditioning was limited by low-rank adaptation capacity. Rank 64 became the best practical setting. Rank 32 reached a higher temporary sensitivity peak, but was less stable. Rank 128 was not a clear improvement.
+
+\begin{table}[H]
+\centering
+\caption{Rank/capacity behavior from the final B200 training campaign. Rank 64 is the strongest selected operating point; rank 128 is not monotonically better.}
+\small
+\begin{tabular}{lrrrrrr}
+\toprule
+\textbf{Model} & \textbf{Step} & $\mathbf{S}$ & \textbf{FVD} & \textbf{PSNR} & \textbf{Sharp.} & \textbf{Motion} \\
+\midrule
+Rank 32 & 7,992 & 2.437 & 86.505 & 17.261 & 0.358 & 0.712 \\
+Rank 32 & 10,000 & \textbf{3.893} & 88.303 & 17.257 & 0.362 & 0.717 \\
+Rank 32 & 23,976 & 1.904 & 89.231 & 17.257 & 0.360 & 0.715 \\
+\midrule
+Rank 64 & 7,992 & 2.735 & 83.906 & 17.262 & 0.357 & 0.709 \\
+Rank 64 & 10,000 & 2.454 & \textbf{82.769} & 17.278 & \textbf{0.360} & 0.710 \\
+Rank 64 & 18,000 & 3.499 & 86.108 & \textbf{17.298} & 0.357 & 0.709 \\
+Rank 64 & 23,976 & 3.157 & 86.805 & 17.269 & 0.359 & 0.711 \\
+\midrule
+Rank 128 & 7,992 & 3.281 & 88.569 & 17.282 & 0.356 & 0.712 \\
+Rank 128 & 12,000 & 2.944 & 83.707 & 17.278 & 0.354 & 0.711 \\
+Rank 128 & 15,000 & 2.591 & 85.809 & 17.276 & 0.352 & 0.707 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\figmaybe{docs/figures/final_report_rewrite/capacity_sensitivity_over_checkpoints.png}{0.84\linewidth}{Action sensitivity over checkpoints. Dense action conditioning is capacity and optimization sensitive: rank 64 gives the best selected tradeoff, while rank 128 does not produce a monotonic improvement.}{fig:capacity}
+
+This supports a concrete conclusion: the action path was not simply useless. It was capacity and objective sensitive. Increasing adaptation capacity helped up to rank 64, but beyond that the model did not automatically become more semantically aligned.
+
+\section{What We Can Claim}
+
+The final claim is intentionally narrow and backed by numbers:
+
+\begin{quote}
+\emph{A no-action diffusion transformer can be a good visual predictor but remains uncontrollable. Our final low-frequency action-conditioned model converts that predictor into an action-sensitive model, improving counterfactual sensitivity from $S_{\mathrm{rgb}}=0.000$ to $2.262$ on 1,904 validation windows, while preserving near-baseline visual quality. On high-action clips, correct actions are slightly but consistently better than wrong actions on PSNR and SSIM, giving the first semantic action-alignment evidence.}
+\end{quote}
+
+The result is significant because it establishes three points:
+\begin{enumerate}
+\item \textbf{Action conditioning is measurable.} The output changes under counterfactual action perturbations, with $S_{\mathrm{rgb}}=2.262$ on full validation and $S_{\mathrm{rgb}}=2.303$ on high-action clips.
+\item \textbf{Visual quality is largely preserved.} V4 correct has PSNR 17.180 and SSIM 0.70816 versus no-action PSNR 17.153 and SSIM 0.70789; FVD-style changes only from 11.702 to 11.747.
+\item \textbf{Correct actions matter most where they should.} High-action clips show positive correct-vs-wrong PSNR and SSIM advantage; acceleration and turning strata show the clearest gains.
+\end{enumerate}
+
+\section{What We Cannot Claim}
+
+We should not claim that the final model solves action-conditioned driving video generation. The correct-vs-wrong advantage is positive but small. Braking remains weak: $\Delta$PSNR $=-0.00064$ and $\Delta$SSIM $=-0.00003$ on the brake stratum. Low-action clips also do not show positive action advantage, which is expected because the context already explains most of the future.
+
+We also should not claim that the action model strictly beats the no-action model on every visual metric. No-action remains slightly better in FVD-style distance and sharpness. The correct interpretation is a controllability-fidelity tradeoff, not a total dominance result.
+
+\section{Conclusion}
+
+The project produced a clear discovery: for pretrained diffusion-transformer driving video generation, action control and visual fidelity are separate axes. Naive action conditioning can look good under PSNR/SSIM while destroying detail or motion. The final low-frequency temporal action objective avoids this failure mode. It makes the model action-sensitive on full validation, preserves near-baseline visual quality, and gives positive correct-action advantage on high-action clips.
+
+The final result is not a solved world model. It is a strong and defensible step: a previously action-blind visual predictor becomes measurably controllable while staying visually competitive with the no-action baseline.
+
+\begin{thebibliography}{9}
+\bibitem{ddpm}
+J. Ho, A. Jain, and P. Abbeel. Denoising Diffusion Probabilistic Models. NeurIPS, 2020.
+\bibitem{dit}
+W. Peebles and S. Xie. Scalable Diffusion Models with Transformers. ICCV, 2023.
+\bibitem{lora}
+E. Hu et al. LoRA: Low-Rank Adaptation of Large Language Models. ICLR, 2022.
+\bibitem{worldmodels}
+Recent autonomous-driving world-model systems motivate action-conditioned future generation, but our experiments focus specifically on lightweight action adaptation of a pretrained video diffusion transformer.
+\end{thebibliography}
+
+\end{document}
