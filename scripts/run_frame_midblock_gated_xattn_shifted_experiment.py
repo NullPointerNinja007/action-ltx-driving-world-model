@@ -10,8 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 MODAL = ROOT / ".venv" / "bin" / "modal"
 LOG_DIR = ROOT / "data" / "modal_logs" / "frame_midblock_gated_xattn_shifted_seed231"
 
-TRAIN_WRAPPER = "train_ltx2b_distilled_waymo_frame_midblock_gated_xattn_action_lora.py"
-INFER_WRAPPER = "generate_waymo24_distilled_frame_midblock_gated_xattn_action_minterpolate_lora.py"
+TRAIN_WRAPPER = "scripts/wrappers/train_ltx2b_distilled_waymo_frame_midblock_gated_xattn_action_lora.py"
+INFER_WRAPPER = "scripts/wrappers/generate_waymo24_distilled_frame_midblock_gated_xattn_action_minterpolate_lora.py"
 
 SMOKE_RUN_NAME = "ltx2b_dist098_waymo24_frame_midblock_gated_xattn_seed231_from_shifted_noaction_step003000_smoke500"
 MAIN_RUN_NAME = "ltx2b_dist098_waymo24_frame_midblock_gated_xattn_seed231_from_shifted_noaction_step003000_steps3000"

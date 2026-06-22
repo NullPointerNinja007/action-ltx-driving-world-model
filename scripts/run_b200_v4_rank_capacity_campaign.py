@@ -30,8 +30,8 @@ if not MODAL.exists():
 if not PYTHON.exists():
     PYTHON = Path(sys.executable)
 
-TRAIN_WRAPPER = "train_ltx2b_distilled_waymo_frame_temporal_bottleneck_fullaction_motion_v4_action_lora.py"
-INFER_WRAPPER = "generate_waymo24_distilled_frame_temporal_bottleneck_fullaction_motion_v4_action_minterpolate_lora.py"
+TRAIN_WRAPPER = "scripts/wrappers/train_ltx2b_distilled_waymo_frame_temporal_bottleneck_fullaction_motion_v4_action_lora.py"
+INFER_WRAPPER = "scripts/wrappers/generate_waymo24_distilled_frame_temporal_bottleneck_fullaction_motion_v4_action_minterpolate_lora.py"
 COPY_WRAPPER = "scripts/copy_modal_volume_subtree.py"
 
 SOURCE_CHECKPOINT_VOLUME = "ltx2b-dist098-waymo24-full112-lowfreq-motion-v4-r16-ckpts"

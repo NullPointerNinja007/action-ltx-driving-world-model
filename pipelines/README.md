@@ -9,5 +9,3 @@ Production-style Modal entrypoints for data preparation and training.
 - `setup/verify_training_volumes.py`: verifies imported MP4 windows, manifests, model files, and latent-cache status.
 - `training/train_ltx2b_waymo_visual_lora.py`: trains the LTX-2B visual LoRA continuation baseline from cached latents.
 - `evaluation/benchmark_video_quality.py`: evaluates generated continuation videos against the real future frames with future-only PSNR/SSIM/MSE, sharpness, temporal-delta, and copy-leakage metrics.
-
-Root-level wrapper files are kept for backward-compatible commands.

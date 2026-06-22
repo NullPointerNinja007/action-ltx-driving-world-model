@@ -18,7 +18,7 @@ sweep.RUN_NAME = "ltx2b_dist098_waymo24_frame_temporal_bottleneck_hfteacher_v2_s
 sweep.CHECKPOINT_VOLUME = "ltx2b-dist098-waymo24-framebneck-hft-v2-r16-ckpts"
 sweep.ARTIFACT_VOLUME = "ltx2b-dist098-waymo24-framebneck-hft-v2-infer"
 sweep.RUNS_ROOT = "distilled098_framebottleneck_hfteacher_v2_action_lora_24fps_minterpolate_seed231_runs"
-sweep.WRAPPER = "generate_waymo24_distilled_frame_temporal_bottleneck_hf_teacher_action_minterpolate_lora_v2.py"
+sweep.WRAPPER = "scripts/wrappers/generate_waymo24_distilled_frame_temporal_bottleneck_hf_teacher_action_minterpolate_lora_v2.py"
 
 sweep.SWEEP_CHECKPOINTS = ["step_000050", "step_000100", "step_000250", "step_000500", "step_001000"]
 sweep.COUNTERFACTUAL_BASE_CHECKPOINTS = ["step_000050", "step_000100", "step_000250"]

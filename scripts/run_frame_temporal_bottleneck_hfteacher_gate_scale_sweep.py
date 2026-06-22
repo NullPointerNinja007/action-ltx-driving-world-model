@@ -37,7 +37,7 @@ RUN_NAME = "ltx2b_dist098_waymo24_frame_temporal_bottleneck_hfteacher_seed231_fr
 CHECKPOINT_VOLUME = "ltx2b-dist098-waymo24-framebottleneck-hfteacher-action-r16-ckpts"
 ARTIFACT_VOLUME = "ltx2b-dist098-waymo24-framebottleneck-hfteacher-action-infer"
 RUNS_ROOT = "distilled098_framebottleneck_hfteacher_action_lora_24fps_minterpolate_seed231_runs"
-WRAPPER = "generate_waymo24_distilled_frame_temporal_bottleneck_hf_teacher_action_minterpolate_lora.py"
+WRAPPER = "scripts/wrappers/generate_waymo24_distilled_frame_temporal_bottleneck_hf_teacher_action_minterpolate_lora.py"
 METHOD_KEY = "frame_temporal_bottleneck_hfteacher"
 METHOD_LABEL = "Frame Temporal Bottleneck + HF Teacher"
 MANIFEST_STEM = "frame_temporal_bottleneck_hfteacher_gate_scale_sweep_seed231_all5"
@@ -49,7 +49,7 @@ SIDE_BY_SIDE_MANIFEST_NAME = "manifest_phase2_gate_scale_side_by_side.json"
 FINAL_SUMMARY_NAME = "phase2_gate_scale_sweep_summary.json"
 
 V2_RUN_NAME = "ltx2b_dist098_waymo24_frame_temporal_bottleneck_hfteacher_v2_seed231_from_shifted_noaction_step003000_steps1000"
-V2_TRAIN_WRAPPER = "train_ltx2b_distilled_waymo_frame_temporal_bottleneck_hf_teacher_action_lora_v2.py"
+V2_TRAIN_WRAPPER = "scripts/wrappers/train_ltx2b_distilled_waymo_frame_temporal_bottleneck_hf_teacher_action_lora_v2.py"
 
 NOACTION_MANIFEST = (
     ROOT

@@ -17,8 +17,8 @@ RUN_NAME = "ltx2b_dist098_waymo24_frame_temporal_bottleneck_lowfreq_v3b_gate1e4_
 CHECKPOINT_VOLUME = "ltx2b-dist098-waymo24-framebneck-lowfreq-v3-r16-ckpts"
 ARTIFACT_VOLUME = "ltx2b-dist098-waymo24-framebneck-lowfreq-v3-infer"
 RUNS_ROOT = "distilled098_framebneck_lowfreq_v3_action_lora_24fps_minterpolate_seed231_runs"
-TRAIN_WRAPPER = "train_ltx2b_distilled_waymo_frame_temporal_bottleneck_lowfreq_v3_action_lora.py"
-INFER_WRAPPER = "generate_waymo24_distilled_frame_temporal_bottleneck_lowfreq_v3_action_minterpolate_lora.py"
+TRAIN_WRAPPER = "scripts/wrappers/train_ltx2b_distilled_waymo_frame_temporal_bottleneck_lowfreq_v3_action_lora.py"
+INFER_WRAPPER = "scripts/wrappers/generate_waymo24_distilled_frame_temporal_bottleneck_lowfreq_v3_action_minterpolate_lora.py"
 
 BENCHMARK_DIR = ROOT / "data" / "benchmarks" / "frame_temporal_bottleneck_lowfreq_v3_gate_scale_sweep_seed231_all5"
 LOCAL_GENERATED_ROOT = ROOT / "data" / "frame_temporal_bottleneck_lowfreq_v3_gate_scale_sweep_generated"

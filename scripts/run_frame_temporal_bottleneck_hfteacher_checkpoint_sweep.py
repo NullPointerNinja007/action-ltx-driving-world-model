@@ -33,7 +33,7 @@ RUN_NAME = "ltx2b_dist098_waymo24_frame_temporal_bottleneck_hfteacher_seed231_fr
 CHECKPOINT_VOLUME = "ltx2b-dist098-waymo24-framebottleneck-hfteacher-action-r16-ckpts"
 ARTIFACT_VOLUME = "ltx2b-dist098-waymo24-framebottleneck-hfteacher-action-infer"
 RUNS_ROOT = "distilled098_framebottleneck_hfteacher_action_lora_24fps_minterpolate_seed231_runs"
-WRAPPER = "generate_waymo24_distilled_frame_temporal_bottleneck_hf_teacher_action_minterpolate_lora.py"
+WRAPPER = "scripts/wrappers/generate_waymo24_distilled_frame_temporal_bottleneck_hf_teacher_action_minterpolate_lora.py"
 
 NOACTION_MANIFEST = (
     ROOT

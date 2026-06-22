@@ -45,6 +45,7 @@ scripts/
   compute_*      Video quality, FVD-style, and counterfactual metrics.
   plot_*         Result plotting utilities.
   build_final_*  Final qualitative side-by-side/showcase builders.
+  wrappers/      Legacy Modal preset wrappers used by older campaign scripts.
 
 docs/
   final_report/  Final report PDF, LaTeX source, and Overleaf zip.
@@ -53,16 +54,14 @@ docs/
   results/       Compact final metrics, summaries, and plots.
 ```
 
-Root-level Python files are compatibility wrappers for older `modal run <script>.py` commands.
-
 ## Important Entry Points
 
 Training and inference:
 
 - `pipelines/training/train_ltx2b_waymo_visual_lora.py`
 - `pipelines/inference/generate_waymo24_action_minterpolate_lora.py`
-- `train_ltx2b_distilled_waymo_frame_temporal_bottleneck_fullaction_motion_v4_action_lora.py`
-- `generate_waymo24_distilled_frame_temporal_bottleneck_fullaction_motion_v4_action_minterpolate_lora.py`
+- `scripts/run_b200_v4_rank_capacity_campaign.py`
+- `scripts/run_b200_v4_three_epoch_continuation.py`
 
 Evaluation:
 

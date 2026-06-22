@@ -64,7 +64,7 @@ CONDITIONS = [
     Condition(
         key="uniform_cleanctx",
         label="Uniform timestep, clean context",
-        wrapper="generate_waymo24_minterpolate_distilled_lora_2epoch.py",
+        wrapper="scripts/wrappers/generate_waymo24_minterpolate_distilled_lora_2epoch.py",
         checkpoint_volume="ltx2b-dist098-waymo24-noaction-visual-lora-r16-2epoch-ckpts",
         artifact_volume="ltx2b-dist098-waymo24-noaction-cleanctx-infer",
         runs_root="distilled098_noaction_uniform_cleanctx_24fps_minterpolate_seed231_runs",
@@ -74,7 +74,7 @@ CONDITIONS = [
     Condition(
         key="shifted_lognormal",
         label="Shifted log-normal timestep, clean context",
-        wrapper="generate_waymo24_minterpolate_distilled_lora_shifted_timestep_ablation.py",
+        wrapper="scripts/wrappers/generate_waymo24_minterpolate_distilled_lora_shifted_timestep_ablation.py",
         checkpoint_volume="ltx2b-dist098-waymo24-noaction-shifted-timestep-ablation-ckpts",
         artifact_volume="ltx2b-dist098-waymo24-noaction-shifted-timestep-ablation-infer",
         runs_root="distilled098_noaction_shifted_timestep_ablation_24fps_minterpolate_seed231_runs",
@@ -133,7 +133,7 @@ def train_shifted_ablation(seed: int, max_steps: int) -> None:
     cmd = [
         str(MODAL),
         "run",
-        "train_ltx2b_distilled_waymo_visual_lora_shifted_timestep_ablation.py",
+        "scripts/wrappers/train_ltx2b_distilled_waymo_visual_lora_shifted_timestep_ablation.py",
         "--run-name",
         SHIFTED_RUN_NAME,
         "--max-steps",

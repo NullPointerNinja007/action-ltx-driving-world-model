@@ -49,7 +49,7 @@ class Method:
 METHOD = Method(
     key="frame_midblock_gated_xattn",
     label="Frame Mid-Block Gated XAttn",
-    wrapper="generate_waymo24_distilled_frame_midblock_gated_xattn_action_minterpolate_lora.py",
+    wrapper="scripts/wrappers/generate_waymo24_distilled_frame_midblock_gated_xattn_action_minterpolate_lora.py",
     checkpoint_volume="ltx2b-dist098-waymo24-midxattn-r16-shift-ckpts",
     artifact_volume="ltx2b-dist098-waymo24-midxattn-r16-shift-infer",
     runs_root="distilled098_framemidxattn_action_lora_24fps_minterpolate_seed231_shifted_runs",

@@ -50,7 +50,7 @@ METHODS = [
     Method(
         key="frame_transformer",
         label="Frame Transformer",
-        wrapper="generate_waymo24_distilled_frame_transformer_action_minterpolate_lora.py",
+        wrapper="scripts/wrappers/generate_waymo24_distilled_frame_transformer_action_minterpolate_lora.py",
         checkpoint_volume="ltx2b-dist098-waymo24-framexf-action-lora-r16-ckpts",
         artifact_volume="ltx2b-dist098-waymo24-framexf-action-lora-infer",
         runs_root="distilled098_framexf_action_lora_24fps_minterpolate_seed231_runs",
@@ -63,7 +63,7 @@ METHODS = [
     Method(
         key="frame_temporal_pool",
         label="Frame Temporal Pool",
-        wrapper="generate_waymo24_distilled_frame_temporal_pool_action_minterpolate_lora.py",
+        wrapper="scripts/wrappers/generate_waymo24_distilled_frame_temporal_pool_action_minterpolate_lora.py",
         checkpoint_volume="ltx2b-dist098-waymo24-framepool-action-lora-r16-ckpts",
         artifact_volume="ltx2b-dist098-waymo24-framepool-action-lora-infer",
         runs_root="distilled098_framepool_action_lora_24fps_minterpolate_seed231_runs",
@@ -76,7 +76,7 @@ METHODS = [
     Method(
         key="frame_global_mlp",
         label="Frame Global MLP",
-        wrapper="generate_waymo24_distilled_frame_global_mlp_action_minterpolate_lora.py",
+        wrapper="scripts/wrappers/generate_waymo24_distilled_frame_global_mlp_action_minterpolate_lora.py",
         checkpoint_volume="ltx2b-dist098-waymo24-frameglobal-action-lora-r16-ckpts",
         artifact_volume="ltx2b-dist098-waymo24-frameglobal-action-lora-infer",
         runs_root="distilled098_frameglobal_action_lora_24fps_minterpolate_seed231_runs",
@@ -89,7 +89,7 @@ METHODS = [
     Method(
         key="frame_adaln",
         label="Frame AdaLN",
-        wrapper="generate_waymo24_distilled_frame_adaln_action_minterpolate_lora.py",
+        wrapper="scripts/wrappers/generate_waymo24_distilled_frame_adaln_action_minterpolate_lora.py",
         checkpoint_volume="ltx2b-dist098-waymo24-frameadaln-action-lora-r16-ckpts",
         artifact_volume="ltx2b-dist098-waymo24-frameadaln-action-lora-infer",
         runs_root="distilled098_frameadaln_action_lora_24fps_minterpolate_seed231_runs",

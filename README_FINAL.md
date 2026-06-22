@@ -22,8 +22,10 @@ The selected model is the V4 full-action, low-frequency action-conditioning mode
 
 The most important scripts are:
 
-- `train_ltx2b_distilled_waymo_frame_temporal_bottleneck_fullaction_motion_v4_action_lora.py`
-- `generate_waymo24_distilled_frame_temporal_bottleneck_fullaction_motion_v4_action_minterpolate_lora.py`
+- `pipelines/training/train_ltx2b_waymo_visual_lora.py`
+- `pipelines/inference/generate_waymo24_action_minterpolate_lora.py`
+- `scripts/run_b200_v4_rank_capacity_campaign.py`
+- `scripts/run_b200_v4_three_epoch_continuation.py`
 - `scripts/run_final_action_alignment_validation.py`
 - `scripts/compute_final_action_alignment_metrics_modal.py`
 

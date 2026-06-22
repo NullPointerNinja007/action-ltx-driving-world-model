@@ -5,7 +5,7 @@ The current benchmark harness evaluates generated continuation videos against th
 Default command:
 
 ```bash
-./.venv/bin/python benchmark_video_quality.py
+./.venv/bin/python pipelines/evaluation/benchmark_video_quality.py
 ```
 
 Default input:
@@ -42,7 +42,7 @@ Core metrics:
 FVD command:
 
 ```bash
-./.venv/bin/python benchmark_video_quality.py \
+./.venv/bin/python pipelines/evaluation/benchmark_video_quality.py \
   --manifest path/to/manifest.json \
   --source-dir data/inference_input_clips/interpolated_24fps_waymo_full20s \
   --output-dir data/benchmarks/my_run_with_fvd \
@@ -58,7 +58,7 @@ By default, `--compute-fvd` uses `torchvision` `r3d_18` Kinetics features. This 
 Canonical I3D-style FVD:
 
 ```bash
-./.venv/bin/python benchmark_video_quality.py \
+./.venv/bin/python pipelines/evaluation/benchmark_video_quality.py \
   --manifest path/to/manifest.json \
   --source-dir data/inference_input_clips/interpolated_24fps_waymo_full20s \
   --output-dir data/benchmarks/my_run_with_i3d_fvd \

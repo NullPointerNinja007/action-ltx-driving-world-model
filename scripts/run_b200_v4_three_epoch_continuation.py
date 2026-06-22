@@ -21,7 +21,7 @@ if not MODAL.exists():
 if not PYTHON.exists():
     PYTHON = Path(sys.executable)
 
-TRAIN_WRAPPER = "train_ltx2b_distilled_waymo_frame_temporal_bottleneck_fullaction_motion_v4_action_lora.py"
+TRAIN_WRAPPER = "scripts/wrappers/train_ltx2b_distilled_waymo_frame_temporal_bottleneck_fullaction_motion_v4_action_lora.py"
 COPY_WRAPPER = "scripts/copy_modal_volume_within.py"
 
 CHECKPOINT_VOLUME = "ltx2b-v4-b200-rank-capacity-ckpts"

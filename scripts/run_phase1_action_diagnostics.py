@@ -32,7 +32,7 @@ RUN_NAME = "ltx2b_dist098_waymo24_frame_midblock_gated_xattn_seed231_from_shifte
 CHECKPOINT_VOLUME = "ltx2b-dist098-waymo24-midxattn-r16-shift-ckpts"
 ARTIFACT_VOLUME = "ltx2b-dist098-waymo24-midxattn-r16-shift-infer"
 RUNS_ROOT = "distilled098_framemidxattn_action_lora_24fps_minterpolate_seed231_shifted_runs"
-WRAPPER = "generate_waymo24_distilled_frame_midblock_gated_xattn_action_minterpolate_lora.py"
+WRAPPER = "scripts/wrappers/generate_waymo24_distilled_frame_midblock_gated_xattn_action_minterpolate_lora.py"
 
 CONTEXT_FRAMES = 49
 FUTURE_FRAMES = 72
