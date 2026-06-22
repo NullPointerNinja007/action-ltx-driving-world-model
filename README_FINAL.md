@@ -1,72 +1,81 @@
-# CS231N Final Submission: Action-Sensitive Driving Video Generation
+# Final Submission Guide
 
-This branch is the final packaged version of the project for CS231N. It contains the code, report, poster, compact result artifacts, and analysis scripts needed to understand and reproduce the final experiments.
+This repository is the cleaned final package for the CS231N project **Action-Sensitive Driving Video Generation**. It contains the code, report, poster, compact metrics, and plotting scripts needed to understand the final experiments.
 
-## Project Summary
+## What To Read First
 
-We study front-camera driving video continuation with a pretrained video diffusion transformer. Given 49 observed frames at 24 FPS, the model generates the next 72 frames. The main question is whether future ego actions can make the generated future controllable without destroying visual quality.
+1. Final report: `docs/final_report/cs231n_final_action_ltx_waymo_report.pdf`
+2. Poster: `docs/poster/cs231n_poster_final.pdf`
+3. Final action-alignment summary: `docs/results/final_action_alignment/final_action_alignment_report.md`
+4. Three-epoch V4 analysis: `docs/results/b200_three_epoch/three_epoch_deep_analysis.md`
 
-The final method uses per-frame 112D ego-action vectors, a temporal action bottleneck, low-frequency future-token losses, high-frequency teacher preservation, and LoRA adaptation. The final validation campaign compares the selected action-conditioned model against a no-action visual baseline and against counterfactual wrong-action generations.
+## Final Model Family
 
-## What Is Included
+The selected model is the V4 full-action, low-frequency action-conditioning model. It uses:
 
-- `pipelines/`: data preparation, training, inference, and evaluation modules.
-- `scripts/`: Modal launchers, checkpoint sweeps, metric computation, plotting, side-by-side builders, and final validation scripts.
-- `docs/final_report/`: final report PDF, LaTeX source, and Overleaf zip.
-- `docs/poster/`: final poster PDF.
-- `docs/poster_assets/`: poster-ready diagrams and plots.
-- `docs/results/`: compact final metrics, plots, and reports copied from the ignored local benchmark tree.
-- `docs/figures/`: figures used by the final report.
+- full `112D` per-frame ego actions,
+- a temporal action bottleneck,
+- low-frequency target and temporal-delta losses,
+- high-frequency teacher preservation from the no-action visual model,
+- gated residual action injection,
+- LoRA adaptation with frozen base video transformer weights.
 
-## What Is Not Included
+The most important scripts are:
 
-Large generated artifacts are intentionally excluded from Git:
+- `train_ltx2b_distilled_waymo_frame_temporal_bottleneck_fullaction_motion_v4_action_lora.py`
+- `generate_waymo24_distilled_frame_temporal_bottleneck_fullaction_motion_v4_action_minterpolate_lora.py`
+- `scripts/run_final_action_alignment_validation.py`
+- `scripts/compute_final_action_alignment_metrics_modal.py`
 
-- trained checkpoint volumes,
-- raw/interpolated video windows,
-- generated inference videos,
-- cached latents,
-- full Modal volume exports,
-- large per-step loss dumps.
+## Final Evaluation
 
-Those assets are external to the repository. The code and compact result files in this branch are enough for review and for recreating the final analyses if equivalent external volumes are restored.
+The final validation set contains `1,904` held-out windows. For each window, the selected action model was evaluated with:
 
-## Key External Data Assumptions
+- correct recorded actions,
+- zero actions,
+- shuffled actions from another validation clip,
+- reversed future actions.
 
-The final dataset uses Waymo Open Dataset front-camera clips processed into:
+This supports two separate questions:
 
-- 24 FPS interpolated windows,
-- 121 frames per window,
-- 49 context frames,
-- 72 future frames,
-- 7,992 training windows per epoch,
-- 1,904 held-out final validation windows.
+- **Action sensitivity:** does changing the action sequence change the generated future?
+- **Action alignment:** is the generation from the correct action sequence closer to the recorded future than wrong-action generations?
 
-The active data volume name used throughout the Modal scripts is:
+The no-action baseline has action sensitivity `S_rgb = 0.000` by construction. The selected action model reaches `S_rgb = 2.262` while remaining close to the no-action baseline on FVD-style, PSNR, and SSIM. Correct-action advantage is small globally but positive on high-action clips, especially acceleration and turning.
 
-```text
-waymo-e2e-24fps-121f-visual-continuation-data
-```
+## Compact Result Files
 
-The final V4 checkpoint volume used for the best action-conditioned models is:
-
-```text
-ltx2b-v4-b200-rank-capacity-ckpts
-```
-
-## Final Result Artifacts
-
-The main final result files are:
+Final alignment:
 
 - `docs/results/final_action_alignment/model_mode_summary.csv`
+- `docs/results/final_action_alignment/per_clip_action_alignment.csv`
 - `docs/results/final_action_alignment/correct_vs_wrong_advantage_summary.csv`
 - `docs/results/final_action_alignment/stratum_summary.csv`
-- `docs/results/final_action_alignment/final_action_alignment_report.md`
+- `docs/results/final_action_alignment/fvd_summary.csv`
+
+B200 rank/capacity and continuation:
+
+- `docs/results/final_v4_b200/b200_rank_capacity_analysis.md`
+- `docs/results/final_v4_b200/model_summary_with_fvd.csv`
 - `docs/results/b200_three_epoch/three_epoch_deep_analysis.md`
 - `docs/results/b200_three_epoch/model_summary_with_fvd.csv`
-- `docs/results/final_v4_b200/b200_rank_capacity_analysis.md`
 
-The final report and poster are:
+All-method checkpoint curves:
 
-- `docs/final_report/cs231n_final_action_ltx_waymo_report.pdf`
-- `docs/poster/cs231n_poster_final.pdf`
+- `docs/results/all_methods_checkpoint_curves/all_methods_plot_rows.csv`
+- `docs/results/all_methods_checkpoint_curves/v4_plot_rows.csv`
+- `docs/results/all_methods_checkpoint_curves/metric_plots/`
+
+## What Is Not In Git
+
+Large or private artifacts are intentionally excluded:
+
+- model checkpoints,
+- raw/interpolated video windows,
+- generated videos,
+- cached latents,
+- Modal logs,
+- private storage paths,
+- full benchmark dumps.
+
+The repository is meant to be a public, reviewable final package rather than a full artifact mirror.
