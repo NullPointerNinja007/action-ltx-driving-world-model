@@ -1,0 +1,13 @@
+model_key,model_label,counterfactual_action_mode,checkpoint_step,stratum,fvd_future,fvd_backend,fvd_num_videos,fvd_num_frames,fvd_size,fvd_feature_dim,fvd_device,num_feature_shards
+noaction_shifted_step003000,No-action shifted LoRA step 3000,correct,3000,accelerate,23.998199072614995,torchvision_r3d18_kinetics400,408,16,112,512,feature_sharded_a10g,26
+v4_r64_selected_step018000,V4 rank 64 selected step 18000,correct,18000,accelerate,24.012409305293687,torchvision_r3d18_kinetics400,408,16,112,512,feature_sharded_a10g,26
+noaction_shifted_step003000,No-action shifted LoRA step 3000,correct,3000,all,11.702304874352421,torchvision_r3d18_kinetics400,1904,16,112,512,feature_sharded_a10g,119
+v4_r64_selected_step018000,V4 rank 64 selected step 18000,correct,18000,all,11.746773872992748,torchvision_r3d18_kinetics400,1904,16,112,512,feature_sharded_a10g,119
+noaction_shifted_step003000,No-action shifted LoRA step 3000,correct,3000,brake,20.288832578937132,torchvision_r3d18_kinetics400,402,16,112,512,feature_sharded_a10g,26
+v4_r64_selected_step018000,V4 rank 64 selected step 18000,correct,18000,brake,20.664586090512444,torchvision_r3d18_kinetics400,402,16,112,512,feature_sharded_a10g,26
+noaction_shifted_step003000,No-action shifted LoRA step 3000,correct,3000,high_action,12.86944299040971,torchvision_r3d18_kinetics400,1055,16,112,512,feature_sharded_a10g,66
+v4_r64_selected_step018000,V4 rank 64 selected step 18000,correct,18000,high_action,13.047817883344692,torchvision_r3d18_kinetics400,1055,16,112,512,feature_sharded_a10g,66
+noaction_shifted_step003000,No-action shifted LoRA step 3000,correct,3000,low_action,21.821261249433235,torchvision_r3d18_kinetics400,571,16,112,512,feature_sharded_a10g,36
+v4_r64_selected_step018000,V4 rank 64 selected step 18000,correct,18000,low_action,21.909890510346656,torchvision_r3d18_kinetics400,571,16,112,512,feature_sharded_a10g,36
+noaction_shifted_step003000,No-action shifted LoRA step 3000,correct,3000,turning,18.342633340170778,torchvision_r3d18_kinetics400,509,16,112,512,feature_sharded_a10g,32
+v4_r64_selected_step018000,V4 rank 64 selected step 18000,correct,18000,turning,18.324956355817903,torchvision_r3d18_kinetics400,509,16,112,512,feature_sharded_a10g,32

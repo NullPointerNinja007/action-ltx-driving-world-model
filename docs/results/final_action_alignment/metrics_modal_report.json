@@ -1,0 +1,18 @@
+{
+  "alignment_chunk_size": 4,
+  "created_at_utc": "2026-06-05T22:50:52.038635+00:00",
+  "fvd_batch_size": 8,
+  "fvd_feature_chunk_size": 16,
+  "fvd_num_frames": 16,
+  "fvd_size": 112,
+  "manifest": "data/benchmarks/final_action_alignment_validation_seed231/primary_subset_generation_manifest.json",
+  "note": "FVD-style uses torchvision R3D-18 Kinetics features over future frames; it is for relative comparison only.",
+  "num_alignment_groups": 1904,
+  "num_alignment_shards": 476,
+  "num_fvd_feature_shards": 1205,
+  "num_fvd_groups": 5,
+  "num_fvd_stratum_groups": 12,
+  "num_quality_shards": 1190,
+  "num_records": 9520,
+  "quality_chunk_size": 8
+}

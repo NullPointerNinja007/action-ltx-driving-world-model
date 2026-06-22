@@ -1,0 +1,9 @@
+{
+  "abs_future_y_displacement_p80": 2.182123708724976,
+  "combined_action_score_p30": 0.36333168344572186,
+  "mean_abs_yaw_rate_p80": 0.03154973834753037,
+  "mean_accel_x_p20": -0.12285335510969161,
+  "mean_accel_x_p80": 0.12128264456987381,
+  "speed_delta_p20": -1.0019701004028319,
+  "speed_delta_p80": 0.9619946479797363
+}

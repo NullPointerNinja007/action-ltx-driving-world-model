@@ -1,0 +1,6 @@
+model_key,model_label,counterfactual_action_mode,checkpoint_step,stratum,fvd_future,fvd_backend,fvd_num_videos,fvd_num_frames,fvd_size,fvd_feature_dim,fvd_device,num_feature_shards
+noaction_shifted_step003000,No-action shifted LoRA step 3000,correct,3000,all,11.702304874352421,torchvision_r3d18_kinetics400,1904,16,112,512,feature_sharded_a10g,119
+v4_r64_selected_step018000,V4 rank 64 selected step 18000,correct,18000,all,11.746773872992748,torchvision_r3d18_kinetics400,1904,16,112,512,feature_sharded_a10g,119
+v4_r64_selected_step018000,V4 rank 64 selected step 18000,reversed_future,18000,all,11.760928597443893,torchvision_r3d18_kinetics400,1904,16,112,512,feature_sharded_a10g,119
+v4_r64_selected_step018000,V4 rank 64 selected step 18000,shuffled,18000,all,11.76077104503102,torchvision_r3d18_kinetics400,1904,16,112,512,feature_sharded_a10g,119
+v4_r64_selected_step018000,V4 rank 64 selected step 18000,zero,18000,all,11.781378672301543,torchvision_r3d18_kinetics400,1904,16,112,512,feature_sharded_a10g,119

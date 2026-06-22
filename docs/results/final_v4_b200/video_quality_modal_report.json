@@ -1,0 +1,10 @@
+{
+  "chunk_size": 1,
+  "created_at_utc": "2026-06-05T06:30:42.345172+00:00",
+  "manifest": "<repo>/data/benchmarks/b200_v4_rank_capacity_seed231/manifest_checkpoint_sweep.json",
+  "model_summary_csv": "<repo>/data/benchmarks/b200_v4_rank_capacity_seed231/model_summary.csv",
+  "num_models": 35,
+  "num_records": 175,
+  "num_shards": 175,
+  "per_clip_metrics_csv": "<repo>/data/benchmarks/b200_v4_rank_capacity_seed231/per_clip_metrics.csv"
+}

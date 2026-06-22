@@ -1,0 +1,55 @@
+{
+  "status": "completed_with_manual_duplicate_stop",
+  "checkpoint_volume": "ltx2b-v4-b200-rank-capacity-ckpts",
+  "stop_relpath": "control/stop_r128_after_r32_r64_done.json",
+  "verified_at_utc": "2026-06-05T09:40:00Z",
+  "runs": {
+    "r32_continue": {
+      "run_name": "ltx2b_dist098_waymo24_full112_lowfreq_motion_v4_main_text_r32_b200_seed231_resume007992_to023976",
+      "rank": 32,
+      "target_checkpoint": "step_023976",
+      "target_checkpoint_exists": true,
+      "usable_latest_checkpoint": "step_023976",
+      "notes": "Target checkpoint was saved. Modal then preempted/restarted the function from step_007992, causing the controller to mark the subprocess failed after manual duplicate-stop. The checkpoint objective was still achieved."
+    },
+    "r64_continue": {
+      "run_name": "ltx2b_dist098_waymo24_full112_lowfreq_motion_v4_main_text_r64_b200_seed231_resume007992_to023976",
+      "rank": 64,
+      "target_checkpoint": "step_023976",
+      "target_checkpoint_exists": true,
+      "usable_latest_checkpoint": "step_023976",
+      "notes": "Completed normally and saved the target checkpoint."
+    },
+    "r128_train_until_done": {
+      "run_name": "ltx2b_dist098_waymo24_full112_lowfreq_motion_v4_main_text_r128_b200_seed231_from_shifted_noaction_step003000_trainuntil_r32r64done",
+      "rank": 128,
+      "target_policy": "train until r32 and r64 continuations finish",
+      "usable_latest_checkpoint": "step_015000",
+      "external_stop_checkpoint": "final_external_stop_step_000600",
+      "notes": "The r128 job reached and saved step_015000 before a Modal preemption. After the stop sentinel was written, Modal restarted the same function and exited cleanly at final_external_stop_step_000600. For evaluation, use step_015000 as the latest useful r128 checkpoint; the final_external_stop checkpoint is only proof of graceful stop after restart."
+    }
+  },
+  "manual_interventions": [
+    {
+      "action": "stopped_duplicate_r32_modal_app",
+      "app_id": "ap-AGegKK0G7j27TEucbTtuQq",
+      "reason": "r32 had already saved step_023976, then Modal restarted the function after worker preemption"
+    },
+    {
+      "action": "wrote_stop_sentinel",
+      "path": "control/stop_r128_after_r32_r64_done.json",
+      "reason": "r32 and r64 final checkpoints were verified"
+    },
+    {
+      "action": "stopped_second_duplicate_r32_modal_app",
+      "app_id": "ap-lD9O3VwCukvFDnVXl278in",
+      "reason": "prevent redundant B200 retraining after final checkpoint was already saved"
+    }
+  ],
+  "evaluation_recommendation": [
+    "Evaluate r32 at step_023976.",
+    "Evaluate r64 at step_023976.",
+    "Evaluate r128 at step_015000 first; optionally include step_007992 and step_010000 for rank-128 learning curve.",
+    "Do not treat final_external_stop_step_000600 as the latest trained r128 model."
+  ]
+}

@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#ffffff"/>
+
+  <defs>
+    <style>
+      .title { font-family: Arial, Helvetica, sans-serif; font-size: 54px; font-weight: 800; fill: #111111; }
+      .subtitle { font-family: Arial, Helvetica, sans-serif; font-size: 27px; font-weight: 500; fill: #444444; }
+      .group-title { font-family: Arial, Helvetica, sans-serif; font-size: 31px; font-weight: 800; fill: #111111; }
+      .item { font-family: Arial, Helvetica, sans-serif; font-size: 27px; font-weight: 600; fill: #202020; }
+      .dim { font-family: Arial, Helvetica, sans-serif; font-size: 25px; font-weight: 700; fill: #8f1111; }
+      .note { font-family: Arial, Helvetica, sans-serif; font-size: 25px; font-weight: 500; fill: #555555; }
+      .small { font-family: Arial, Helvetica, sans-serif; font-size: 22px; font-weight: 500; fill: #555555; }
+    </style>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#000000" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <text x="800" y="82" text-anchor="middle" class="title">Per-Frame Ego Action Vector</text>
+  <text x="800" y="126" text-anchor="middle" class="subtitle">Continuous driving-control signals aligned to every video frame</text>
+
+  <g transform="translate(92,185)">
+    <rect x="0" y="0" width="1416" height="560" rx="28" fill="#ffffff" stroke="#e4e4e4" stroke-width="4" filter="url(#shadow)"/>
+
+    <rect x="34" y="38" width="132" height="484" rx="20" fill="#9b1414"/>
+    <text x="100" y="250" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="46" font-weight="900" fill="#ffffff">112D</text>
+    <text x="100" y="296" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#ffe6e6">per frame</text>
+
+    <line x1="205" y1="70" x2="205" y2="492" stroke="#e5e5e5" stroke-width="3"/>
+    <line x1="620" y1="70" x2="620" y2="492" stroke="#e5e5e5" stroke-width="3"/>
+    <line x1="1010" y1="70" x2="1010" y2="492" stroke="#e5e5e5" stroke-width="3"/>
+
+    <g transform="translate(242,86)">
+      <circle cx="0" cy="0" r="12" fill="#9b1414"/>
+      <text x="28" y="10" class="group-title">Future path</text>
+      <text x="28" y="74" class="item">Forward path</text>
+      <text x="340" y="74" text-anchor="end" class="dim">20</text>
+      <text x="28" y="132" class="item">Lateral path</text>
+      <text x="340" y="132" text-anchor="end" class="dim">20</text>
+      <text x="28" y="202" class="small">where the ego car is expected to move</text>
+    </g>
+
+    <g transform="translate(660,86)">
+      <circle cx="0" cy="0" r="12" fill="#9b1414"/>
+      <text x="28" y="10" class="group-title">Past motion</text>
+      <text x="28" y="74" class="item">Velocity (x, y)</text>
+      <text x="300" y="74" text-anchor="end" class="dim">32</text>
+      <text x="28" y="132" class="item">Acceleration (x, y)</text>
+      <text x="300" y="132" text-anchor="end" class="dim">32</text>
+      <text x="28" y="202" class="small">recent ego-motion history</text>
+    </g>
+
+    <g transform="translate(1048,86)">
+      <circle cx="0" cy="0" r="12" fill="#9b1414"/>
+      <text x="28" y="10" class="group-title">Current state</text>
+      <text x="28" y="74" class="item">Speed</text>
+      <text x="275" y="74" text-anchor="end" class="dim">1</text>
+      <text x="28" y="132" class="item">Yaw rate</text>
+      <text x="275" y="132" text-anchor="end" class="dim">1</text>
+      <text x="28" y="190" class="item">Camera velocity</text>
+      <text x="275" y="190" text-anchor="end" class="dim">6</text>
+      <text x="28" y="260" class="small">instantaneous motion cues</text>
+    </g>
+
+    <line x1="242" y1="388" x2="1360" y2="388" stroke="#ededed" stroke-width="4"/>
+    <text x="242" y="452" class="note">Used as numeric conditioning, not as hand-written labels like “brake” or “turn”.</text>
+    <text x="242" y="492" class="note">One 112D vector is attached to each of the 121 video frames.</text>
+  </g>
+
+  <g transform="translate(240,790)">
+    <rect x="0" y="-34" width="1120" height="72" rx="36" fill="#f7f7f7" stroke="#dddddd" stroke-width="3"/>
+    <text x="560" y="10" text-anchor="middle" class="note">Future path 40D  +  Past motion 64D  +  Current state 8D  =  112D ego action vector</text>
+  </g>
+</svg>

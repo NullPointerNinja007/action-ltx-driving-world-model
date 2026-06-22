@@ -1,0 +1,16 @@
+{
+  "checkpoint_volume": "ltx2b-v4-b200-rank-capacity-ckpts",
+  "completed": [
+    "r64_continue",
+    "r128_train_until_done"
+  ],
+  "elapsed_hours": 1.4585207796561088,
+  "errors": {
+    "r32_continue": "RuntimeError('Command failed after 2 attempts; see <repo>/data/modal_logs/b200_v4_three_epoch_continuation_seed231/training/r32_continue_to23976.log')"
+  },
+  "failed": [
+    "r32_continue"
+  ],
+  "finished_at_utc": "2026-06-05T09:38:20.987957+00:00",
+  "stop_relpath": "control/stop_r128_after_r32_r64_done.json"
+}

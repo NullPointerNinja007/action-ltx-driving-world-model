@@ -1,0 +1,21 @@
+{
+  "adapter_rank": 32,
+  "audit_passed": true,
+  "budget_decision": "run_all_three",
+  "calibration_run": "ltx2b_dist098_waymo24_full112_lowfreq_motion_v4_main_text_r32_b200_seed231_calibration100",
+  "created_at_utc": "2026-06-05T04:57:42.859549+00:00",
+  "expand_baseline_lora_to_rank": true,
+  "freeze_transformer_lora": false,
+  "last_grad_norm_lora": 0.030235422775149345,
+  "last_loss": 0.33519601821899414,
+  "lora_alpha": 32,
+  "sec_per_step": 0.4606055624324325,
+  "trainable_parameter_counts": {
+    "action_encoder": 7338465,
+    "action_gate": 3,
+    "action_injector": 14956800,
+    "lora": 38674432,
+    "total": 60969700
+  },
+  "training_config_lora_rank": 32
+}

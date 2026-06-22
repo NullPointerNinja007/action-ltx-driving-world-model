@@ -258,4 +258,5 @@ __marimo__/
 *.synctex.gz
 *.jpg
 *.csv
+!docs/results/**/*.csv
 __pycache__/
